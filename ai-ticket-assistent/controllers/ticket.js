@@ -337,3 +337,181 @@ export const testAI = async (req, res) => {
     });
   }
 };
+
+export const getDashboardStats = async (req, res) => {
+  try {
+    // Only admins can access dashboard stats
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin only." });
+    }
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // Get ticket counts by time period
+    const todayTickets = await Ticket.countDocuments({
+      createdAt: { $gte: today }
+    });
+
+    const weekTickets = await Ticket.countDocuments({
+      createdAt: { $gte: weekAgo }
+    });
+
+    const monthTickets = await Ticket.countDocuments({
+      createdAt: { $gte: monthAgo }
+    });
+
+    const totalTickets = await Ticket.countDocuments({});
+
+    // Get status breakdown
+    const statusBreakdown = await Ticket.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Get priority breakdown
+    const priorityBreakdown = await Ticket.aggregate([
+      {
+        $group: {
+          _id: "$priority",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Get level breakdown
+    const levelBreakdown = await Ticket.aggregate([
+      {
+        $group: {
+          _id: "$level",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Get team member assignments
+    const teamAssignments = await Ticket.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "assignedTo",
+          foreignField: "_id",
+          as: "assignedUser"
+        }
+      },
+      {
+        $unwind: "$assignedUser"
+      },
+      {
+        $group: {
+          _id: "$assignedUser.email",
+          totalAssigned: { $sum: 1 },
+          todo: {
+            $sum: { $cond: [{ $eq: ["$status", "TODO"] }, 1, 0] }
+          },
+          inProgress: {
+            $sum: { $cond: [{ $eq: ["$status", "IN_PROGRESS"] }, 1, 0] }
+          },
+          done: {
+            $sum: { $cond: [{ $eq: ["$status", "DONE"] }, 1, 0] }
+          }
+        }
+      },
+      {
+        $sort: { totalAssigned: -1 }
+      }
+    ]);
+
+    // Get recent tickets (last 10)
+    const recentTickets = await Ticket.find({})
+      .populate("assignedTo", ["email", "_id"])
+      .populate("createdBy", ["email", "_id"])
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    // Get tickets by day for the last 7 days
+    const dailyStats = await Ticket.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: weekAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      }
+    ]);
+
+    // Calculate resolution rate
+    const resolvedTickets = await Ticket.countDocuments({ status: "DONE" });
+    const resolutionRate = totalTickets > 0 ? (resolvedTickets / totalTickets * 100).toFixed(1) : 0;
+
+    // Get average resolution time (for completed tickets)
+    const avgResolutionTime = await Ticket.aggregate([
+      {
+        $match: { status: "DONE" }
+      },
+      {
+        $addFields: {
+          resolutionTime: {
+            $divide: [
+              { $subtract: ["$updatedAt", "$createdAt"] },
+              1000 * 60 * 60 * 24 // Convert to days
+            ]
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          avgDays: { $avg: "$resolutionTime" }
+        }
+      }
+    ]);
+
+    const stats = {
+      overview: {
+        totalTickets,
+        todayTickets,
+        weekTickets,
+        monthTickets,
+        resolvedTickets,
+        resolutionRate: parseFloat(resolutionRate),
+        avgResolutionDays: avgResolutionTime.length > 0 ? Math.round(avgResolutionTime[0].avgDays * 10) / 10 : 0
+      },
+      statusBreakdown: statusBreakdown.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {}),
+      priorityBreakdown: priorityBreakdown.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {}),
+      levelBreakdown: levelBreakdown.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {}),
+      teamAssignments,
+      recentTickets,
+      dailyStats
+    };
+
+    return res.status(200).json(stats);
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error.message);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
