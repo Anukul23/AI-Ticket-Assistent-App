@@ -41,7 +41,7 @@ export default function Tickets() {
   const fetchTickets = async (page = 1) => {
     try {
       setRefreshing(true);
-      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/tickets?page=${page}&limit=10`, {
+      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/tickets?page=${page}&limit=10`, {
         headers: { Authorization: `Bearer ${token}` },
         method: "GET",
       });
@@ -88,7 +88,7 @@ export default function Tickets() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/tickets`, {
+      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/tickets`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -125,7 +125,7 @@ export default function Tickets() {
 
   const handleStatusUpdate = async (ticketId, newStatus) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/tickets/${ticketId}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/tickets/${ticketId}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

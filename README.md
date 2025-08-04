@@ -295,10 +295,101 @@ The system automatically sends email notifications for important ticket events:
 - **Direct Links**: One-click access to ticket details in the dashboard
 - **Error Handling**: Graceful failure handling to prevent ticket creation issues
 
-### **Configuration**
+### **Current Configuration (Development)**
 
-- **Testing**: Uses Mailtrap for development and testing
-- **Production**: Can be configured for any SMTP provider (Gmail, SendGrid, etc.)
+The system is currently configured to use **Mailtrap** for email testing during development:
+
+```env
+# Mailtrap Configuration (Development/Testing)
+MAILTRAP_SMTP_HOST=smtp.mailtrap.io
+MAILTRAP_SMTP_PORT=2525
+MAILTRAP_SMTP_USER=your_mailtrap_username
+MAILTRAP_SMTP_PASS=your_mailtrap_password
+```
+
+**Note**: Mailtrap captures emails in a sandbox environment and does not send them to real email addresses. This is perfect for development and testing.
+
+### **Production Email Configuration**
+
+When deploying to production, companies should configure a real email service. Here are the recommended options:
+
+#### **Option 1: Gmail SMTP (Recommended for Small-Medium Companies)**
+
+**Setup Steps:**
+1. Enable 2-Factor Authentication on the Gmail account
+2. Generate an App Password:
+   - Go to Google Account Settings → Security → 2-Step Verification → App passwords
+   - Select "Mail" and generate a new app password
+3. Update the email configuration in `utils/mail.js`:
+
+```javascript
+// Replace Mailtrap configuration with Gmail SMTP
+const transporter = nodemailer.createTransporter({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD, // Use App Password, not regular password
+  },
+});
+```
+
+4. Add to `.env` file:
+```env
+GMAIL_USER=company_email@gmail.com
+GMAIL_APP_PASSWORD=your_16_character_app_password
+```
+
+#### **Option 2: SendGrid (Recommended for Large Companies)**
+
+**Setup Steps:**
+1. Create a SendGrid account
+2. Generate an API key
+3. Update email configuration:
+
+```javascript
+const transporter = nodemailer.createTransporter({
+  host: 'smtp.sendgrid.net',
+  port: 587,
+  secure: false,
+  auth: {
+    user: 'apikey',
+    pass: process.env.SENDGRID_API_KEY,
+  },
+});
+```
+
+4. Add to `.env` file:
+```env
+SENDGRID_API_KEY=your_sendgrid_api_key
+```
+
+#### **Option 3: AWS SES (Enterprise Solution)**
+
+**Setup Steps:**
+1. Configure AWS SES in your AWS account
+2. Verify email addresses or domains
+3. Update email configuration:
+
+```javascript
+const transporter = nodemailer.createTransporter({
+  host: process.env.AWS_SES_HOST,
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.AWS_SES_USER,
+    pass: process.env.AWS_SES_PASS,
+  },
+});
+```
+
+### **Production Email Best Practices**
+
+- **Use App Passwords**: Never use regular passwords for SMTP authentication
+- **Environment Variables**: Store all email credentials in environment variables
+- **Rate Limiting**: Implement email rate limiting to avoid spam filters
+- **Error Handling**: Log email failures and implement retry mechanisms
+- **Monitoring**: Set up email delivery monitoring and alerts
+- **Compliance**: Ensure email practices comply with GDPR, CAN-SPAM, etc.
 - **Customization**: Easy to modify email templates and recipient lists
 
 ## 🎯 Recent Enhancements (Latest Update)

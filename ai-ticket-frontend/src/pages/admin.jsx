@@ -11,7 +11,7 @@ export default function AdminDashboard() {
   const fetchDashboardStats = async () => {
     try {
       setRefreshing(true);
-      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/tickets/dashboard/stats`, {
+      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/tickets/dashboard/stats`, {
         headers: { Authorization: `Bearer ${token}` },
         method: "GET",
       });
@@ -265,14 +265,14 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`badge badge-sm ${ticket.status === 'TODO' ? 'badge-warning' :
-                      ticket.status === 'IN_PROGRESS' ? 'badge-info' :
-                        'badge-success'
+                    ticket.status === 'IN_PROGRESS' ? 'badge-info' :
+                      'badge-success'
                     }`}>
                     {ticket.status}
                   </span>
                   <span className={`badge badge-sm ${ticket.priority === 'high' ? 'badge-error' :
-                      ticket.priority === 'medium' ? 'badge-warning' :
-                        'badge-success'
+                    ticket.priority === 'medium' ? 'badge-warning' :
+                      'badge-success'
                     }`}>
                     {ticket.priority}
                   </span>

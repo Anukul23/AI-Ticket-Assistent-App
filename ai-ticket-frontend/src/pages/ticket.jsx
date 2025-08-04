@@ -32,7 +32,7 @@ export default function TicketDetailsPage() {
   useEffect(() => {
     const fetchTicket = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/tickets/${id}`, {
+        const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/tickets/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
           method: "GET",
         });
@@ -61,7 +61,7 @@ export default function TicketDetailsPage() {
 
     setUpdating(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/tickets/${id}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/tickets/${id}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
